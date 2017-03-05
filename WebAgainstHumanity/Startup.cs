@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using WebAgainstHumanity.Managers;
+using WebAgainstHumanity.Middleware;
 using WebAgainstHumanity.Models.Db;
 
 namespace WebAgainstHumanity
@@ -32,13 +33,21 @@ namespace WebAgainstHumanity
         {
             // Add framework services.
             services.AddMvc();
-            services.AddSingleton(typeof(IGameRoomManager), typeof(GameRoomManager));
-            services.AddSingleton(typeof(IConnectionManager), typeof(WSConnectionManager));
-            services.AddSingleton(typeof(ISessionManager), typeof(SessionsManager));
             var connectionString = Configuration["Data:Conn"];
             services.AddDbContext<WahContext>(
                 opts => opts.UseNpgsql(connectionString)
             );
+            services.AddDistributedMemoryCache();
+            services.AddSession(options =>
+            {
+                options.CookieName = ".WebAgainstHumanity.Session";
+                options.IdleTimeout = TimeSpan.FromSeconds(7200);
+                options.CookieHttpOnly = true;
+            });
+            services.AddSingleton(typeof(IGameRoomManager), typeof(GameRoomManager));
+            services.AddSingleton(typeof(IConnectionManager), typeof(WSConnectionManager));
+            services.AddSingleton(typeof(ISessionManager), typeof(SessionsManager));
+            services.AddTransient(typeof(ISessionMiddleware), typeof(SessionMiddleware));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -47,6 +56,7 @@ namespace WebAgainstHumanity
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
 
+            app.UseSession();
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -56,11 +66,12 @@ namespace WebAgainstHumanity
             {
                 app.UseExceptionHandler("/Home/Error");
             }
-
-            app.UseStaticFiles();
-
+            app.Use(async (http, next) => 
+            {
+                var sessionMiddleware = http.RequestServices.GetService<ISessionMiddleware>();
+                await sessionMiddleware.ProcessRequest(http, next);
+            });
             app.UseWebSockets();
-
             app.Use(async (http, next) =>
             {
                 if(http.WebSockets.IsWebSocketRequest)
@@ -72,6 +83,8 @@ namespace WebAgainstHumanity
                     await next();
                 }
             });
+            app.UseStaticFiles();
+
 
             app.UseMvc(routes =>
             {
