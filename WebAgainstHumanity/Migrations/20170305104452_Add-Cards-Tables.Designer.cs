@@ -8,9 +8,10 @@ using WebAgainstHumanity.Models.Db;
 namespace WebAgainstHumanity.Migrations
 {
     [DbContext(typeof(WahContext))]
-    partial class WahContextModelSnapshot : ModelSnapshot
+    [Migration("20170305104452_Add-Cards-Tables")]
+    partial class AddCardsTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
             modelBuilder
                 .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn)

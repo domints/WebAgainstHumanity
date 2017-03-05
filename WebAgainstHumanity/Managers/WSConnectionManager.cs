@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
@@ -8,7 +9,16 @@ using WebAgainstHumanity.Models;
 
 namespace WebAgainstHumanity.Managers
 {
-    public class WSConnectionManager
+    public interface IConnectionManager
+    {
+        Connection GetConnectionById(string id);
+        List<Connection> GetAll();
+        string GetId(WebSocket socket);
+        void AddConnection(Connection conn);
+        Task RemoveSocket(string id);
+    }
+
+    public class WSConnectionManager : IConnectionManager
     {
         private ConcurrentDictionary<string, Connection> _sockets = new ConcurrentDictionary<string, Connection>();
 
@@ -17,9 +27,9 @@ namespace WebAgainstHumanity.Managers
             return _sockets.FirstOrDefault(p => p.Key == id).Value;
         }
 
-        public ConcurrentDictionary<string, Connection> GetAll()
+        public List<Connection> GetAll()
         {
-            return _sockets;
+            return _sockets.Select(s => s.Value).ToList();
         }
 
         public string GetId(WebSocket socket)

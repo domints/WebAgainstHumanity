@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using WebAgainstHumanity.Managers;
 using WebAgainstHumanity.Models.Db;
 
 namespace WebAgainstHumanity
@@ -31,7 +32,9 @@ namespace WebAgainstHumanity
         {
             // Add framework services.
             services.AddMvc();
-
+            services.AddSingleton(typeof(IGameRoomManager), typeof(GameRoomManager));
+            services.AddSingleton(typeof(IConnectionManager), typeof(WSConnectionManager));
+            services.AddSingleton(typeof(ISessionManager), typeof(SessionsManager));
             var connectionString = Configuration["Data:Conn"];
             services.AddDbContext<WahContext>(
                 opts => opts.UseNpgsql(connectionString)
