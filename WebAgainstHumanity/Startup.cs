@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using WebAgainstHumanity.Managers;
 using WebAgainstHumanity.Middleware;
 using WebAgainstHumanity.Models.Db;
+using WebAgainstHumanity.Sockets;
 
 namespace WebAgainstHumanity
 {
@@ -48,6 +49,9 @@ namespace WebAgainstHumanity
             services.AddSingleton(typeof(IConnectionManager), typeof(WSConnectionManager));
             services.AddSingleton(typeof(ISessionManager), typeof(SessionsManager));
             services.AddTransient(typeof(ISessionMiddleware), typeof(SessionMiddleware));
+            services.AddTransient(typeof(IWebSocketManagerMiddleware), typeof(WebSocketManagerMiddleware));
+            services.AddScoped(typeof(WebSocketHandler));
+            services.AddTransient<IProtocolHandler, ProtocolHandler>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -74,17 +78,10 @@ namespace WebAgainstHumanity
             app.UseWebSockets();
             app.Use(async (http, next) =>
             {
-                if(http.WebSockets.IsWebSocketRequest)
-                {
-
-                }
-                else
-                {
-                    await next();
-                }
+                var wsMiddleWare = http.RequestServices.GetService<IWebSocketManagerMiddleware>();
+                await wsMiddleWare.ProcessRequest(http, next);
             });
             app.UseStaticFiles();
-
 
             app.UseMvc(routes =>
             {
